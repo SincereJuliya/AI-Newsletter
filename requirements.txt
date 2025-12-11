@@ -7,3 +7,5 @@ requests
 yake
 tqdm
 python-dateutil
+ollama
+
