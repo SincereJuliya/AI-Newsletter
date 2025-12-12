@@ -1,5 +1,8 @@
 name: Weekly Update with LLaMA
 
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:  # manual trigger
   schedule:
