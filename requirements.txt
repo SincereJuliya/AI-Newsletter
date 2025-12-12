@@ -8,4 +8,5 @@ yake
 tqdm
 python-dateutil
 ollama
-
+pyyaml
+typeguard
