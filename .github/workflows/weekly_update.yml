@@ -13,17 +13,16 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
+      - name: Checkout repo manually
         run: |
-          python -m venv venv
+          # Клонируем репозиторий в текущую папку
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git clone https://github.com/SincereJuliya/AI-Newsletter.git .
+      
+      - name: Set up Python manually
+        run: |
+          python3 -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
@@ -35,10 +34,9 @@ jobs:
 
       - name: Commit and Push Updated CSVs
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add semantic_scholar_results.csv new_articles_digest.csv new_articles_digest_ai.csv
           git commit -m "Weekly update: $(date '+%Y-%m-%d')" || echo "No changes to commit"
-          git push origin weekly-update
+          # Пушим в отдельную ветку weekly-update
+          git push origin HEAD:weekly-update
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
