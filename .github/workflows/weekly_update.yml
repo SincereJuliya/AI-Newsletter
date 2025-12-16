@@ -10,32 +10,32 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      # 1. Checkout repo
-      - name: Checkout repo
+      # 1️⃣ Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2. Установка системных пакетов Python (для ensurepip/venv)
-      - name: Install system dependencies
+      # 2️⃣ (Опционально) Установка системных пакетов Python
+      # Уже установлены, можно пропустить, оставлено для надёжности
+      - name: Ensure system dependencies
         run: |
           sudo apt update
-          sudo apt install -y python3-venv python3-pip curl
+          sudo apt install -y python3-venv python3-pip curl || echo "Dependencies already installed"
 
-      # 3. Создание venv и установка pip вручную (если ensurepip нет)
-      - name: Create virtual environment
+      # 3️⃣ Создание виртуального окружения и установка зависимостей
+      - name: Set up Python virtual environment
         run: |
+          rm -rf venv
           python3 -m venv venv
           source venv/bin/activate
-          curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-          python get-pip.py
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4. Run main script
+      # 4️⃣ Запуск основного скрипта
       - name: Run Weekly Update
         run: |
           venv/bin/python run_all.py
 
-      # 5. Commit and push updated CSVs
+      # 5️⃣ Commit и Push обновлённых CSV
       - name: Commit and Push Updated CSVs
         run: |
           git config user.name "github-actions[bot]"
