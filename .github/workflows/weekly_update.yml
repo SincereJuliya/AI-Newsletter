@@ -1,7 +1,4 @@
-name: Weekly Update with LLaMA
-
-permissions:
-  contents: write
+name: Weekly Update with LLaMA (Safe)
 
 on:
   workflow_dispatch:       # ручной запуск
@@ -13,30 +10,34 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout repo manually
+      # 1️⃣ Обновление репозитория
+      - name: Pull latest repo
         run: |
-          # Клонируем репозиторий в текущую папку
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git clone https://github.com/SincereJuliya/AI-Newsletter.git .
-      
-      - name: Set up Python manually
+          git fetch origin
+          git checkout weekly-update
+          git pull origin weekly-update
+
+      # 2️⃣ Настройка Python и виртуального окружения
+      - name: Set up Python
         run: |
           python3 -m venv venv
           source venv/bin/activate
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # 3️⃣ Запуск основного скрипта
       - name: Run Weekly Update
         run: |
           source venv/bin/activate
           python run_all.py
 
+      # 4️⃣ Commit и Push обновлённых CSV
       - name: Commit and Push Updated CSVs
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add semantic_scholar_results.csv new_articles_digest.csv new_articles_digest_ai.csv
           git commit -m "Weekly update: $(date '+%Y-%m-%d')" || echo "No changes to commit"
-          # Пушим в отдельную ветку weekly-update
-          git push origin HEAD:weekly-update
+          git push origin weekly-update
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
