@@ -14,52 +14,45 @@ jobs:
       # 1️⃣ Обновление репозитория
       - name: Pull latest repo
         run: |
-          # Включаем немедленный выход при ошибке
           set -e
           git fetch origin
           git checkout weekly-update
           git pull origin weekly-update
 
-      # 2️⃣ Настройка Python и виртуального окружения (Исправлено)
-      - name: Set up Python Environment and Install Dependencies
+      # 2️⃣ Настройка Python (Используем actions/setup-python)
+      # Это действие гарантирует, что Python и pip доступны и корректно настроены.
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          # Используйте версию, которая вам нужна (например, 3.10 или 3.11)
+          python-version: '3.10'
+          cache: 'pip' # Включает кэширование pip-зависимостей
+
+      # 3️⃣ Установка зависимостей
+      - name: Install dependencies
         run: |
           set -e
-          
-          # Убеждаемся, что python3 доступен
-          which python3 || { echo "Error: python3 command not found."; exit 1; }
-          
-          # Создание виртуального окружения
-          python3 -m venv venv
-          
-          # Определяем пути к исполняемым файлам внутри venv
-          VENV_PIP="./venv/bin/pip"
-          VENV_PYTHON="./venv/bin/python"
-          
-          # Обновление pip и установка зависимостей, используя venv-интерпретатор
-          "${VENV_PYTHON}" -m pip install --upgrade pip
-          "${VENV_PIP}" install -r requirements.txt
+          # После setup-python, pip доступен без явного venv/bin/pip
+          pip install --upgrade pip
+          pip install -r requirements.txt
 
-      # 3️⃣ Запуск основного скрипта (Исправлено)
+      # 4️⃣ Запуск основного скрипта
       - name: Run Weekly Update
         run: |
           set -e
-          # Используем явный путь к интерпретатору venv
-          ./venv/bin/python run_all.py
+          # После setup-python, команда python доступна в PATH
+          python run_all.py
 
-      # 4️⃣ Commit и Push обновлённых CSV
+      # 5️⃣ Commit и Push обновлённых CSV
       - name: Commit and Push Updated CSVs
-        # Этот шаг должен выполняться только в случае успеха (по умолчанию)
         run: |
           set -e
-          # Используем токен, предоставленный GitHub, для аутентификации
+          # Глобальные настройки для бота
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Добавляем все целевые файлы
           git add semantic_scholar_results.csv new_articles_digest.csv new_articles_digest_ai.csv
           
-          # Пытаемся сделать коммит, игнорируем, если изменений нет
           git commit -m "Weekly update: $(date '+%Y-%m-%d')" || echo "No changes to commit"
           
-          # Отправляем изменения в ветку weekly-update
           git push origin weekly-update
