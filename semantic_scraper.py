@@ -1,4 +1,5 @@
 from collections import defaultdict
+import random
 import requests
 import time
 import csv
@@ -14,19 +15,23 @@ CSV_FILE = "semantic_scholar_results.csv"
 DIGEST_FILE = "new_articles_digest.csv"
 
 API_URL = "https://api.semanticscholar.org/graph/v1/paper/search"
-DELAY = 62  # delay
 
 fields_filter = "Environmental Science,Agricultural,Geography,Geology,Engineering,Physics,Computer Science"
 
 RIVERS = ["Po", "Sarca", "Chiese", "Adige", "Noce", "Brenta", "Avisio"]
 KEY_TERMS = [
-    ["drought", "Italy", "water scarcity"],
-    ["aridity", "Italy"],
-    ["SPI", "Italy"],
-    ["SPEI", "Italy"],
-    ["PDSI", "Italy"],
-    ["temperature anomaly", "Italy"],
-    ["hydrological index", "Italy"],
+    ["drought", "Italy"],
+
+    ["SPI", "Italy"],   # Standardized Precipitation Index
+    ["SPEI", "Italy"],  # Standardized Precipitation Evapotranspiration Index
+    ["PDSI", "Italy"],  # Palmer Drought Severity Index
+    ["SRI", "Italy"],   # Standardized Runoff Index
+
+    ["agricultural drought", "Italy"],
+    ["drought management policy", "Italy"],
+
+    ["satellite drought monitoring", "Italy"],
+    ["Copernicus", "drought"]
 ]
 
 # ==========================
@@ -70,7 +75,9 @@ SMART_QUERIES = build_smart_queries()
 # ==========================
 # Fetch papers
 # ==========================
-def fetch_batch(query, offset=0):
+def fetch_batch(query, offset=0, attempt=0, max_attempts=5):
+    backoff_base = 30  # 
+    max_wait = 300     #
     params = {
         "query": query,
         "fields": "title,authors,year,publicationDate,url,abstract",
@@ -78,16 +85,40 @@ def fetch_batch(query, offset=0):
         "publicationDateOrYear": f"{last_scraped_date}:",
         "fieldsOfStudy": fields_filter
     }
-    r = requests.get(API_URL, params=params)
+    try:
+        r = requests.get(API_URL, params=params)
+    except requests.exceptions.RequestException as e:
+        if attempt >= max_attempts:
+            print(f"⚠️ Request exception: {e} → skipping query '{query}'")
+            return []
+        wait_time = min(backoff_base * (2 ** attempt) + random.uniform(0, 3), max_wait)
+        print(f"⚠️ Request exception: {e} → retrying in {wait_time:.1f}s (attempt {attempt+1})")
+        time.sleep(wait_time)
+        return fetch_batch(query, offset, attempt + 1, max_attempts)
+
     if r.status_code == 200:
         return r.json().get("data", [])
-    elif r.status_code == 429:
-        print("⚠️ 429 Too Many Requests → Waiting...")
-        for _ in tqdm(range(DELAY), desc="Waiting for rate limit"):
-            time.sleep(1)
-        return fetch_batch(query, offset)
+    elif r.status_code in [429, 500]:
+        if attempt >= max_attempts:
+            print(f"⚠️ Maximum attempts reached for query '{query}' → skipping")
+            return []
+        wait_time = min(backoff_base * (2 ** attempt) + random.uniform(0, 3), max_wait)
+        print(f"⚠️ {r.status_code} Error → retrying in {wait_time:.1f}s (attempt {attempt+1})")
+        time.sleep(wait_time)
+        return fetch_batch(query, offset, attempt + 1, max_attempts)
     elif r.status_code == 400:
+        print("⚠️ 400 Bad Request → skipping this batch")
         return []
+    elif r.status_code == 401:
+        print("⚠️ 401 Unauthorized → check your API key or credentials")
+        return []
+    elif r.status_code == 403:
+        print("⚠️ 403 Forbidden → access denied for this resource")
+        return []
+    elif r.status_code == 404:
+        print("⚠️ 404 Not Found → resource does not exist")
+        return []
+    
     else:
         r.raise_for_status()
 
@@ -102,8 +133,6 @@ for q in SMART_QUERIES:
     print(f"\n🔍 Query: {query}")
     offset = 0
     while True:
-        for _ in tqdm(range(DELAY), desc="Waiting before request"):
-            time.sleep(1)
         papers = fetch_batch(query, offset)
         if not papers:
             print("No more papers found for this query.")
@@ -156,7 +185,13 @@ yake_kw_extractor = yake.KeywordExtractor(
     dedupFunc='seqSimilarity',
     windowsSize=2
 )
-RELEVANT_TERMS = ["drought", "water", "river", "basin", "irrigation", "scarcity", "flow", "hydrology"]
+RELEVANT_TERMS = [
+    "drought", "water", "river", "basin", "irrigation", "scarcity", 
+    "flow", "hydrology", "climate", "precipitation", "flooding", 
+    "water stress", "sustainability", "water management", 
+    "groundwater", "evaporation", "runoff", "conservation", 
+    "water quality", "ecosystem", "water conservation", "resource management"
+    ]
 
 for article in tqdm(all_new_articles):
     abstract = article.get("abstract","")

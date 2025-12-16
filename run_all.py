@@ -4,6 +4,9 @@ import os
 import shutil
 from datetime import datetime
 
+# ==========================
+# Archive old CSVs
+# ==========================
 ARCHIVE_DIR = "archive"
 os.makedirs(ARCHIVE_DIR, exist_ok=True)
 
@@ -21,22 +24,31 @@ def archive_file(file_path):
         shutil.copy(file_path, new_name)
         print(f"Archived {file_path} → {new_name}")
 
+# ==========================
+# Run a Python script
+# ==========================
 def run_script(script_name):
-    print(f"\n➡️ Running {script_name} ...")
-    result = subprocess.run([sys.executable, script_name])
-    if result.returncode != 0:
-        print(f"⚠️ Error while running {script_name}")
-        sys.exit(1)
+    if os.path.exists(script_name):
+        print(f"\n➡️ Running {script_name} ...")
+        result = subprocess.run([sys.executable, script_name])
+        if result.returncode != 0:
+            print(f"⚠️ Error while running {script_name}")
+            sys.exit(1)
+    else:
+        print(f"⚠️ {script_name} not found, skipping.")
 
+# ==========================
+# Main function
+# ==========================
 def main():
-    # 1. Архивируем старые CSV
+    # 1. Archive old CSV files
     for f in FILES_TO_ARCHIVE:
         archive_file(f)
 
-    # 2. Скрейпинг новых статей
+    # 2. Scraping new articles
     run_script("semantic_scraper.py")
 
-    # 3. AI-суммаризация
+    # 3. AI digest generation
     run_script("llama_digest.py")
 
     print("\n🎉 Weekly update completed successfully!")
