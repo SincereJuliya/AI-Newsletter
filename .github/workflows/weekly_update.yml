@@ -1,37 +1,41 @@
-name: Weekly Update with LLaMA (Safe)
+name: Weekly Update with LLaMA
 
 on:
-  workflow_dispatch:       # ручной запуск
+  workflow_dispatch:       # manual trigger
   schedule:
-    - cron: '0 10 * * 1'   # каждый понедельник в 10:00 UTC
+    - cron: '0 10 * * 1'   # every Monday at 10:00 UTC
 
 jobs:
   weekly_update:
     runs-on: self-hosted
 
     steps:
-      # 1️⃣ Обновление репозитория
-      - name: Pull latest repo
-        run: |
-          git fetch origin
-          git checkout weekly-update
-          git pull origin weekly-update
+      # 1. Checkout repo
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      # 2️⃣ Настройка Python и виртуального окружения
-      - name: Set up Python
+      # 2. Install system dependencies (if running on self-hosted runner)
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-venv python3-pip
+
+      # 3. Create and set up Python virtual environment
+      - name: Create virtual environment and install pip
         run: |
           python3 -m venv venv
           source venv/bin/activate
-          python -m pip install --upgrade pip
+          curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+          python get-pip.py
+          pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 3️⃣ Запуск основного скрипта
+      # 4. Run Weekly Update
       - name: Run Weekly Update
         run: |
-          source venv/bin/activate
-          python run_all.py
+          venv/bin/python run_all.py
 
-      # 4️⃣ Commit и Push обновлённых CSV
+      # 5. Commit and Push Updated CSVs
       - name: Commit and Push Updated CSVs
         run: |
           git config user.name "github-actions[bot]"
