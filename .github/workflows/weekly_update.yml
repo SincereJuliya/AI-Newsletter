@@ -10,25 +10,25 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      # 1️⃣ Checkout repo
+      # 1️⃣ Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2️⃣ (Опционально) Установка системных пакетов Python
-      # Уже установлены, можно пропустить, оставлено для надёжности
+      # 2️⃣ Установка системных пакетов Python (опционально, если не установлены)
       - name: Ensure system dependencies
         run: |
           sudo apt update
           sudo apt install -y python3-venv python3-pip curl || echo "Dependencies already installed"
 
-      # 3️⃣ Создание виртуального окружения и установка зависимостей
-      - name: Set up Python virtual environment
+      # 3️⃣ Создание виртуального окружения и установка pip вручную
+      - name: Set up Python virtual environment without ensurepip
         run: |
           rm -rf venv
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
+          python3 -m venv venv --without-pip       # создаём venv без pip
+          curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+          venv/bin/python get-pip.py               # ставим pip вручную
+          venv/bin/pip install --upgrade pip
+          venv/bin/pip install -r requirements.txt
 
       # 4️⃣ Запуск основного скрипта
       - name: Run Weekly Update
