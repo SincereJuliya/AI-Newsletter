@@ -1,53 +1,47 @@
 name: Weekly Update with LLaMA (Safe)
 
 on:
-  workflow_dispatch:       # Ручной запуск
+  workflow_dispatch:
   schedule:
-    - cron: '0 10 * * 1'   # Каждый понедельник в 10:00 UTC
+    - cron: '0 10 * * 1'
 
 jobs:
   weekly_update:
-    # Используем ваш self-hosted раннер
     runs-on: self-hosted
 
     steps:
-      # 1️⃣ Обновление репозитория
-      - name: Pull latest repo
-        run: |
-          set -e
-          git fetch origin
-          git checkout weekly-update
-          git pull origin weekly-update
+      # 1️⃣ Загрузка репозитория
+      - name: Checkout repository
+        uses: actions/checkout@v4 
+        with:
+          ref: weekly-update
 
-      # 2️⃣ Настройка Python (Используем actions/setup-python)
-      # Это действие гарантирует, что Python и pip доступны и корректно настроены.
+      # 2️⃣ Настройка Python (Используем PYTHONNOUSERSITE и Python 3.11)
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          # Используйте версию, которая вам нужна (например, 3.10 или 3.11)
-          python-version: '3.10'
-          cache: 'pip' # Включает кэширование pip-зависимостей
+          python-version: '3.11' # <-- Указана версия 3.11
+          cache: 'pip'
+        env:
+          PYTHONNOUSERSITE: 1 # Изолирует от конфликта .local/lib
 
       # 3️⃣ Установка зависимостей
       - name: Install dependencies
         run: |
-          set -e
-          # После setup-python, pip доступен без явного venv/bin/pip
           pip install --upgrade pip
           pip install -r requirements.txt
+        env:
+          PYTHONNOUSERSITE: 1 
 
       # 4️⃣ Запуск основного скрипта
       - name: Run Weekly Update
-        run: |
-          set -e
-          # После setup-python, команда python доступна в PATH
-          python run_all.py
+        run: python run_all.py
+        env:
+          PYTHONNOUSERSITE: 1
 
       # 5️⃣ Commit и Push обновлённых CSV
       - name: Commit and Push Updated CSVs
         run: |
-          set -e
-          # Глобальные настройки для бота
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
@@ -55,4 +49,4 @@ jobs:
           
           git commit -m "Weekly update: $(date '+%Y-%m-%d')" || echo "No changes to commit"
           
-          git push origin weekly-update
+          git push
